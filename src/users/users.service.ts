@@ -1,26 +1,58 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
+import { UsersRepository } from './users.repositary';
+import * as bcrypt from 'bcryptjs';
+import { User } from './entities/users.entity';
 
 @Injectable()
 export class UsersService {
-  create(createUserInput: CreateUserInput) {
-    return 'This action adds a new user';
+  constructor(private readonly usersRepository: UsersRepository) {}
+
+  private hashPassword = async (password: string): Promise<string> => {
+    return await bcrypt.hash(password, 10);
+  };
+
+  async create(createUserInput: CreateUserInput) {
+    const userExist: User = await this.usersRepository.findOne({
+      email: createUserInput.email,
+    });
+    if (userExist) {
+      throw new BadRequestException();
+    }
+    const password = await this.hashPassword(createUserInput.password);
+    return this.usersRepository.create({
+      ...createUserInput,
+      password,
+    });
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll() {
+    return this.usersRepository.find({ isActive: true });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  findOne(_id: string) {
+    return this.usersRepository.findOne({ _id, isActive: true });
   }
 
-  update(id: number, updateUserInput: UpdateUserInput) {
-    return `This action updates a #${id} user`;
+ async  update(_id: string, updateUserInput: UpdateUserInput) {
+    return await this.usersRepository.findOneAndUpdate(
+      { _id },
+      {
+        $set: {
+          ...updateUserInput,
+          password: await this.hashPassword(updateUserInput.password),
+        },
+      },
+    );
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  remove(_id: string) {
+    return this.usersRepository.findOneAndUpdate(
+      {
+        _id,
+      },
+      { $set: { isActive: false } },
+    );
   }
 }

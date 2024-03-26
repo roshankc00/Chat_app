@@ -1,52 +1,58 @@
-import { Logger, NotFoundException } from '@nestjs/common';
-import { AbstractDocument } from './abstract.schema';
 import { FilterQuery, Model, Types, UpdateQuery } from 'mongoose';
-export abstract class AbstractRepositary<TDocument extends AbstractDocument> {
+import { Logger, NotFoundException } from '@nestjs/common';
+import { AbstractEntity } from './abstract.entity';
+
+export abstract class AbstractRepositary<T extends AbstractEntity> {
   protected abstract readonly logger: Logger;
-  constructor(protected readonly model: Model<TDocument>) {}
-  async create(document: Omit<TDocument, '_id'>): Promise<TDocument> {
+  constructor(protected readonly model: Model<T>) {}
+  async create(document: Omit<T, '_id'>): Promise<T> {
     const createdDocument = new this.model({
       ...document,
       _id: new Types.ObjectId(),
     });
-    return (await createdDocument.save()).toJSON() as unknown as TDocument;
+    return (await createdDocument.save()).toJSON() as unknown as T;
   }
 
-  //   lean just removes the additional unwanted  mongoose operation field
-  async findOne(filterQuery: FilterQuery<TDocument>): Promise<TDocument> {
-    const document = await this.model
-      .find({ ...filterQuery })
-      .lean<TDocument>();
+  async findOne(filteredQuery: FilterQuery<T>): Promise<T> {
+    // by default mongooose return with hydrated document which is document of bunch of internal mongoose docuent and internal properties and we dont want them
+    const document = await this.model.findOne(filteredQuery).lean<T>(true);
+
     if (!document) {
-      this.logger.warn('Document not found ', filterQuery);
-      throw new NotFoundException();
+      this.logger.warn(
+        'Document was not found with the filtered query',
+        filteredQuery,
+      );
+      throw new NotFoundException('Document was not found ');
     }
     return document;
   }
+
   async findOneAndUpdate(
-    filteredQuery: FilterQuery<TDocument>,
-    update: UpdateQuery<TDocument>,
-  ): Promise<TDocument> {
+    filteredQuery: FilterQuery<T>,
+    updateQuery: UpdateQuery<T>,
+  ): Promise<T> {
     const document = await this.model
-      .findOneAndUpdate(filteredQuery, update, {
+      .findOneAndUpdate(filteredQuery, updateQuery, {
         new: true,
       })
-      .lean<TDocument>();
+      .lean<T>(true);
+
     if (!document) {
-      this.logger.warn('Document not found ', filteredQuery);
-      throw new NotFoundException();
+      this.logger.warn(
+        'Document was not found with the filtered query',
+        filteredQuery,
+      );
+      throw new NotFoundException('Document was not found ');
     }
 
     return document;
   }
 
-  async find(filteredQuery: FilterQuery<TDocument>): Promise<TDocument[]> {
-    return await this.model.find(filteredQuery).lean<TDocument[]>();
+  async find(filteredQuery: FilterQuery<T>): Promise<T[]> {
+    return this.model.find(filteredQuery).lean<T[]>(true);
   }
 
-  async findOneAndDelete(
-    filterdQuery: FilterQuery<TDocument>,
-  ): Promise<TDocument> {
-    return await this.model.findByIdAndDelete(filterdQuery);
+  async findOneAndDelete(filtedQuery: FilterQuery<T>): Promise<T> {
+    return await this.model.findOneAndDelete(filtedQuery).lean<T>(true);
   }
 }
