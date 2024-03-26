@@ -35,14 +35,17 @@ export class UsersService {
     return this.usersRepository.findOne({ _id, isActive: true });
   }
 
- async  update(_id: string, updateUserInput: UpdateUserInput) {
+  async update(_id: string, updateUserInput: UpdateUserInput) {
+    if (updateUserInput.password) {
+      updateUserInput.password = await this.hashPassword(
+        updateUserInput.password,
+      );
+    }
+
     return await this.usersRepository.findOneAndUpdate(
       { _id },
       {
-        $set: {
-          ...updateUserInput,
-          password: await this.hashPassword(updateUserInput.password),
-        },
+        $set: updateUserInput,
       },
     );
   }
