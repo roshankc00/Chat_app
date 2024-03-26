@@ -16,16 +16,19 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
   async login(user: User, response: Response) {
-    const expires = new Date();
-    expires.setSeconds(
-      expires.getSeconds() + this.configService.getOrThrow('JWT_EXPIRATION'),
-    );
-    const tokenPayload: TokenPayload = {
-      _id: user._id.toHexString(),
-      email: user.email,
+    const tokenPayload = {
+      userId: user._id.toHexString(),
     };
 
-    const token = this.jwtService.sign(tokenPayload);
+    const expires = new Date();
+    expires.setSeconds(
+      expires.getSeconds() + this.configService.get('JWT_EXPIRATION'),
+    );
+
+    const token = this.jwtService.sign(tokenPayload, {
+      secret: this.configService.get('JWT_SECRET'),
+    });
+
     response.cookie('Authentication', token, {
       httpOnly: true,
       expires,
