@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UsersRepository } from './users.repositary';
@@ -14,12 +19,6 @@ export class UsersService {
   };
 
   async create(createUserInput: CreateUserInput) {
-    const userExist: User = await this.usersRepository.findOne({
-      email: createUserInput.email,
-    });
-    if (userExist) {
-      throw new BadRequestException();
-    }
     const password = await this.hashPassword(createUserInput.password);
     return this.usersRepository.create({
       ...createUserInput,
@@ -57,5 +56,24 @@ export class UsersService {
       },
       { $set: { isActive: false } },
     );
+  }
+
+  async validateUser(email: string, password: string) {
+    const userExist: User = await this.usersRepository.findOne({
+      email,
+    });
+    if (!userExist) {
+      throw new NotFoundException();
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      userExist.password,
+    );
+
+    if (!isPasswordCorrect) {
+      throw new UnauthorizedException();
+    }
+    return userExist;
   }
 }

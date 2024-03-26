@@ -8,6 +8,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { UsersModule } from './users/users.module';
 import { LoggerModule } from 'nestjs-pino';
+import { AuthModule } from './auth/auth.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -15,6 +16,9 @@ import { LoggerModule } from 'nestjs-pino';
       validationSchema: Joi.object({
         MONGO_URI: Joi.string().required(),
         PORT: Joi.number().required(),
+        JWT_SECRET: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
+        JWT_EXPIRATION: Joi.number().required(),
       }),
     }),
     DatabaseModule,
@@ -42,6 +46,7 @@ import { LoggerModule } from 'nestjs-pino';
       },
       inject: [ConfigService],
     }),
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
