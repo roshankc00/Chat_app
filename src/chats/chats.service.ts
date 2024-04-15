@@ -6,12 +6,21 @@ import { ChatsRepository } from './chats.repositary';
 @Injectable()
 export class ChatsService {
   constructor(private readonly chartsRepositary: ChatsRepository) {}
-  create(createChatInput: CreateChatInput) {
-    return 'This action adds a new chat';
+  async create(createChatInput: CreateChatInput, userId: string) {
+    const chart = await this.chartsRepositary.findOne({
+      _id: '661cf600e193544531d1865e',
+    });
+    console.log(chart);
+    return this.chartsRepositary.create({
+      ...createChatInput,
+      userId,
+      userIds: createChatInput.userIds || [],
+      messages: [],
+    });
   }
 
-  findAll() {
-    return `This action returns all chats`;
+  async findAll() {
+    return this.chartsRepositary.find({});
   }
 
   findOne(id: number) {

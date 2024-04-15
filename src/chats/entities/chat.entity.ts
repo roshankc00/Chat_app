@@ -1,8 +1,10 @@
-import { ObjectType, Field, Int } from '@nestjs/graphql';
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
-import { AbstractEntity } from 'src/common/database/abstract.entity';
+import { ObjectType, Field } from '@nestjs/graphql';
+import { AbstractEntity } from '../../common/database/abstract.entity';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Message } from 'src/charts/messages/entities/message.entity';
 
 @ObjectType()
+@Schema()
 export class Chat extends AbstractEntity {
   @Field()
   @Prop()
@@ -10,15 +12,18 @@ export class Chat extends AbstractEntity {
 
   @Field()
   @Prop()
-  isPrivate: string;
+  isPrivate: boolean;
+
+  @Field(() => [String])
+  @Prop([String])
+  userIds: string[];
 
   @Field({ nullable: true })
   @Prop()
   name?: string;
 
-  @Field(() => [String])
-  @Prop([String])
-  userIds: string[];
+  @Prop([Message])
+  messages: Message[];
 }
 
-export const chatSchema = SchemaFactory.createForClass(Chat);
+export const ChatSchema = SchemaFactory.createForClass(Chat);

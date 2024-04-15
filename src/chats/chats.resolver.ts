@@ -3,14 +3,22 @@ import { ChatsService } from './chats.service';
 import { Chat } from './entities/chat.entity';
 import { CreateChatInput } from './dto/create-chat.input';
 import { UpdateChatInput } from './dto/update-chat.input';
+import { UseGuards } from '@nestjs/common';
+import { GqlAuthGuard } from 'src/auth/guard/gql.authguard';
+import { CurrentUser } from 'src/auth/decorators/currentuser.decorator';
+import { TokenPayload } from 'src/auth/auth.service';
 
 @Resolver(() => Chat)
 export class ChatsResolver {
   constructor(private readonly chatsService: ChatsService) {}
 
   @Mutation(() => Chat)
-  createChat(@Args('createChatInput') createChatInput: CreateChatInput) {
-    return this.chatsService.create(createChatInput);
+  @UseGuards(GqlAuthGuard)
+  createChat(
+    @Args('createChatInput') createChatInput: CreateChatInput,
+    @CurrentUser() user: TokenPayload,
+  ) {
+    return this.chatsService.create(createChatInput, user.userId);
   }
 
   @Query(() => [Chat], { name: 'chats' })
