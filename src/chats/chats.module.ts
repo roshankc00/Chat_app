@@ -4,7 +4,7 @@ import { ChatsResolver } from './chats.resolver';
 import { DatabaseModule } from 'src/common/database/database.module';
 import { Chat, ChatSchema } from './entities/chat.entity';
 import { ChatsRepository } from './chats.repositary';
-import { MessagesModule } from 'src/charts/messages/messages.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
