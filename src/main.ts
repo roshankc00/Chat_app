@@ -9,7 +9,7 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe());
   app.useLogger(app.get(Logger));
-  // const configService = app.get(ConfigService);
-  await app.listen(3003);
+  const configService = app.get(ConfigService);
+  await app.listen(configService.get<number>('PORT'));
 }
 bootstrap();
