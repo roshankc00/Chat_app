@@ -9,23 +9,18 @@ import { TokenPayload } from 'src/auth/auth.service';
 import { GetMessagesArgs } from './dto/get-messages.dto';
 import { PUB_SUB } from 'src/common/constants/injection-token';
 import { PubSub } from 'graphql-subscriptions';
-import { MESSAGE_CREATED } from './constants/pubsub-trigger';
 import { MessageCreatedArgs } from './dto/message-created.args';
 
 @Resolver(() => Message)
 export class MessagesResolver {
-  constructor(
-    private readonly messagesService: MessagesService,
-
-    @Inject(PUB_SUB) private readonly pubSub: PubSub,
-  ) {}
+  constructor(private readonly messagesService: MessagesService) {}
 
   @Mutation(() => Message)
   @UseGuards(GqlAuthGuard)
   async createMessage(
     @Args('createMessageInput') createMessageDto: CreateMessageInput,
     @CurrentUser() user: TokenPayload,
-  ) {
+  ): Promise<Message> {
     return this.messagesService.create(createMessageDto, user.userId);
   }
 
@@ -34,23 +29,21 @@ export class MessagesResolver {
   async getMessages(
     @Args() getMessageArgs: GetMessagesArgs,
     @CurrentUser() user: TokenPayload,
-  ) {
-    return this.messagesService.getMessages(getMessageArgs, user.userId);
+  ): Promise<Message[]> {
+    return this.messagesService.getMessages(getMessageArgs);
   }
 
   @Subscription(() => Message, {
-    filter: (payload, variables, context) => {
+    filter: (payload, variables: MessageCreatedArgs, context) => {
       const userId = context.req.user.userId;
+      const message: Message = payload.messageCreated;
       return (
-        payload.messageCreated.chatId === variables.chatId &&
-        userId !== payload.messageCreated.userId
+        variables.chatIds.includes(message.chatId) &&
+        userId !== message.user._id.toHexString()
       );
     },
   })
-  messageCreated(
-    @Args() messageCreatedArgs: MessageCreatedArgs,
-    @CurrentUser() user: TokenPayload,
-  ) {
-    return this.messagesService.messageCreated(messageCreatedArgs, user.userId);
+  messageCreated(@Args() messageCreatedArgs: MessageCreatedArgs) {
+    return this.messagesService.messageCreated();
   }
 }
