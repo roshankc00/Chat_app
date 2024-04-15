@@ -5,7 +5,7 @@ import { Response } from 'express';
 import { User } from 'src/users/entities/users.entity';
 
 export interface TokenPayload {
-  _id: string;
+  userId: string;
   email: string;
 }
 
@@ -18,6 +18,7 @@ export class AuthService {
   async login(user: User, response: Response) {
     const tokenPayload = {
       userId: user._id.toHexString(),
+      email: user.email,
     };
 
     const expires = new Date();

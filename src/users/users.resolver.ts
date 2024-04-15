@@ -5,6 +5,8 @@ import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from 'src/auth/guard/gql.authguard';
+import { CurrentUser } from 'src/auth/decorators/currentuser.decorator';
+import { TokenPayload } from 'src/auth/auth.service';
 
 @Resolver(() => User)
 export class UsersResolver {
@@ -22,17 +24,29 @@ export class UsersResolver {
   }
 
   @Query(() => User, { name: 'user' })
+  @UseGuards(GqlAuthGuard)
   findOne(@Args('_id') _id: string) {
     return this.usersService.findOne(_id);
   }
 
   @Mutation(() => User)
-  updateUser(@Args('updateUerInput') updateUserInput: UpdateUserInput) {
-    return this.usersService.update(updateUserInput._id, updateUserInput);
+  @UseGuards(GqlAuthGuard)
+  updateUser(
+    @Args('updateUerInput') updateUserInput: UpdateUserInput,
+    @CurrentUser() paylaod: TokenPayload,
+  ) {
+    return this.usersService.update(paylaod.userId, updateUserInput);
   }
 
   @Mutation(() => User)
-  removeUser(@Args('id') id: string) {
-    return this.usersService.remove(id);
+  @UseGuards(GqlAuthGuard)
+  removeUser(@CurrentUser() paylaod: TokenPayload) {
+    return this.usersService.remove(paylaod.userId);
+  }
+
+  @Query(() => User, { name: 'currentUser' })
+  @UseGuards(GqlAuthGuard)
+  getCurrentUser(@CurrentUser() payload: TokenPayload) {
+    return this.usersService.findOne(payload.userId);
   }
 }
