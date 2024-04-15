@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Inject, Module, Logger, UnauthorizedException } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -10,6 +10,9 @@ import { UsersModule } from './users/users.module';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module';
 import { ChatsModule } from './chats/chats.module';
+import { PubSubModule } from './common/pubsub/pubsub.module';
+import { AuthService } from './auth/auth.service';
+import { Request } from 'express';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -23,10 +26,36 @@ import { ChatsModule } from './chats/chats.module';
       }),
     }),
     DatabaseModule,
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      installSubscriptionHandlers: true,
-      autoSchemaFile: true,
+      useFactory: (authService: AuthService) => ({
+        autoSchemaFile: true,
+        formatError: (error: any) => {
+          const graphQLFormattedError = {
+            message:
+              error.extensions?.exception?.response?.message || error.message,
+            code: error.extensions?.code || 'Internal server error',
+            name: error.extensions?.exception?.name || error.name,
+          };
+          return graphQLFormattedError;
+        },
+        subscriptions: {
+          'graphql-ws': {
+            onConnect: (context: any) => {
+              try {
+                const request: Request = context.extra.request;
+                const user = authService.verifyWs(request);
+                context.user = user;
+              } catch (err) {
+                new Logger().error(err);
+                throw new UnauthorizedException();
+              }
+            },
+          },
+        },
+      }),
+      imports: [AuthModule],
+      inject: [AuthService],
     }),
     UsersModule,
     LoggerModule.forRootAsync({
@@ -50,6 +79,7 @@ import { ChatsModule } from './chats/chats.module';
     }),
     AuthModule,
     ChatsModule,
+    PubSubModule,
   ],
   controllers: [AppController],
   providers: [AppService],
